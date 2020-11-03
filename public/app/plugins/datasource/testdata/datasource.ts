@@ -50,6 +50,7 @@ export class TestDataDataSource extends DataSourceApi<TestDataQuery> {
 
       switch (target.scenarioId) {
         case 'streaming_client':
+          console.log('mannaiaramadonna');
           streams.push(runStream(target, options));
           break;
         case 'grafana_api':

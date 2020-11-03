@@ -8,6 +8,8 @@
   "alerting": true,
   "annotations": true,
 
+  "streaming": true,
+
   "queryOptions": {
     "minInterval": true,
     "maxDataPoints": true

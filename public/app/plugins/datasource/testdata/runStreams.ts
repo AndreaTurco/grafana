@@ -1,5 +1,8 @@
 import { defaults } from 'lodash';
 import { Observable } from 'rxjs';
+import MQTT from 'async-mqtt';
+// import * as https from 'https';
+// import { webSocket } from 'rxjs/webSocket';
 
 import {
   DataQueryRequest,
@@ -33,7 +36,127 @@ export function runStream(target: TestDataQuery, req: DataQueryRequest<TestDataQ
   if ('fetch' === query.type) {
     return runFetchStream(target, query, req);
   }
+  if ('mqtt' === query.type) {
+    return runMQTTStream(target, query, req);
+  }
   throw new Error(`Unknown Stream Type: ${query.type}`);
+}
+
+export function runMQTTStream(
+  target: TestDataQuery,
+  query: StreamingQuery,
+  req: DataQueryRequest<TestDataQuery>
+): Observable<DataQueryResponse> {
+  return new Observable<DataQueryResponse>(subscriber => {
+    const streamId = `signal-${req.panelId}-${target.refId}`;
+    const maxDataPoints = req.maxDataPoints || 1000;
+
+    const data = new CircularDataFrame({
+      append: 'tail',
+      capacity: maxDataPoints,
+    });
+    data.refId = target.refId;
+    data.name = target.alias || 'Signal ' + target.refId;
+    data.addField({ name: 'time', type: FieldType.time });
+    data.addField({ name: 'value', type: FieldType.number });
+
+    const { spread, speed, bands = 0, noise } = query;
+
+    for (let i = 0; i < bands; i++) {
+      const suffix = bands > 1 ? ` ${i + 1}` : '';
+      data.addField({ name: 'Min' + suffix, type: FieldType.number });
+      data.addField({ name: 'Max' + suffix, type: FieldType.number });
+    }
+
+    let value = 0;
+    let timeoutId: any = null;
+
+    const option = {
+      username: 'admin',
+      password: 'Spindox123!',
+      clientId: 'grafanaPlugin',
+      rejectedUnauthorized: false,
+      ca: './ca-chain-server.crt',
+    };
+
+    // const ws = webSocket('wss://pre-sdp.lamborghini.com/ws/mqtt/big_data/ZHWER1ZFXGLA02494');
+    // ws.subscribe(message => {
+    //   console.log(message);
+    // });
+
+    // ws.on('open', function open() {
+    //   ws.send('something');
+    // });
+
+    const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
+
+    client.on('error', error => {
+      console.log('client NOT connected', error);
+    });
+    client.on('connect', () => {
+      console.log('client connected');
+    });
+
+    client.subscribe('big_data/ZHWER1ZFXGLA02494');
+    client.on('message', async (topic, payload) => {
+      const message = JSON.parse(payload.toString()) || {};
+      console.log('mqttListener', `New message in ${topic}`, message);
+
+      try {
+        const { fields, time, source: vin } = message;
+        console.log(time, vin);
+        value = fields.speed ? fields.speed : 0;
+      } catch (err) {
+        console.error('mqttListener', 'An error occured while service save dato into db', err);
+      }
+    });
+
+    const addNextRow = (time: number) => {
+      value += (Math.random() - 0.5) * spread;
+
+      let idx = 0;
+      data.fields[idx++].values.add(time);
+      data.fields[idx++].values.add(value);
+
+      let min = value;
+      let max = value;
+
+      for (let i = 0; i < bands; i++) {
+        min = min - Math.random() * noise;
+        max = max + Math.random() * noise;
+
+        data.fields[idx++].values.add(min);
+        data.fields[idx++].values.add(max);
+      }
+    };
+
+    // Fill the buffer on init
+    if (true) {
+      let time = Date.now() - maxDataPoints * speed;
+      for (let i = 0; i < maxDataPoints; i++) {
+        addNextRow(time);
+        time += speed;
+      }
+    }
+
+    const pushNextEvent = () => {
+      addNextRow(Date.now());
+      subscriber.next({
+        data: [data],
+        key: streamId,
+      });
+
+      timeoutId = setTimeout(pushNextEvent, speed);
+    };
+
+    // Send first event in 5ms
+    setTimeout(pushNextEvent, 5);
+
+    return () => {
+      console.log('unsubscribing to stream ' + streamId);
+      clearTimeout(timeoutId);
+    };
+  });
 }
 
 export function runSignalStream(

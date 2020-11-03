@@ -15,6 +15,7 @@ const types = [
   { value: 'signal', label: 'Signal' },
   { value: 'logs', label: 'Logs' },
   { value: 'fetch', label: 'Fetch' },
+  { value: 'mqtt', label: 'MQTT' },
 ];
 
 export const StreamingClientEditor = ({ onChange, query }: EditorProps) => {
@@ -33,7 +34,7 @@ export const StreamingClientEditor = ({ onChange, query }: EditorProps) => {
       <InlineField label="Type" labelWidth={14}>
         <Select width={32} onChange={onSelectChange} defaultValue={types[0]} options={types} />
       </InlineField>
-      {query?.stream?.type === 'signal' &&
+      {(query?.stream?.type === 'signal' || query?.stream?.type === 'mqtt') &&
         streamingClientFields.map(({ label, id, min, step, placeholder }) => {
           return (
             <InlineField label={label} labelWidth={14} key={id}>
