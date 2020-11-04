@@ -5,22 +5,32 @@ import { EditorProps } from '../QueryEditor';
 import { StreamingQuery } from '../types';
 
 const streamingClientFields = [
-  { label: 'Speed (ms)', id: 'speed', placeholder: 'value', min: 10, step: 10 },
-  { label: 'Spread', id: 'spread', placeholder: 'value', min: 0.5, step: 0.1 },
-  { label: 'Noise', id: 'noise', placeholder: 'value', min: 0, step: 0.1 },
-  { label: 'Bands', id: 'bands', placeholder: 'bands', min: 0, step: 1 },
+  { label: 'Update (ms)', id: 'update', placeholder: '250', min: 10, step: 10 },
+  // { label: 'Spread', id: 'spread', placeholder: 'value', min: 0.5, step: 0.1 },
+  // { label: 'Noise', id: 'noise', placeholder: 'value', min: 0, step: 0.1 },
+  // { label: 'Bands', id: 'bands', placeholder: 'bands', min: 0, step: 1 },
 ];
 
-const types = [
-  { value: 'signal', label: 'Signal' },
-  { value: 'logs', label: 'Logs' },
-  { value: 'fetch', label: 'Fetch' },
-  { value: 'mqtt', label: 'MQTT' },
+const value_types = [
+  { value: 'speed', label: 'Speed' },
+  { value: 'rpm', label: 'Rpm' },
+  { value: 'engaged_manual', label: 'Engaged' },
+  { value: 'throttle', label: 'Throttle' },
+  { value: 'brake_pressure', label: 'Brake' },
+  { value: 'latitude', label: 'Latitude' },
+  { value: 'longitude', label: 'Longitude' },
+  { value: 'torque', label: 'Torque' },
 ];
+
+const types = [{ value: 'mqtt', label: 'MQTT' }];
 
 export const StreamingClientEditor = ({ onChange, query }: EditorProps) => {
   const onSelectChange = ({ value }: SelectableValue) => {
     onChange({ target: { name: 'type', value } });
+  };
+
+  const onSelectChangeField = ({ value }: SelectableValue) => {
+    onChange({ target: { name: 'type_field', value } });
   };
 
   // Convert values to numbers before saving
@@ -34,6 +44,11 @@ export const StreamingClientEditor = ({ onChange, query }: EditorProps) => {
       <InlineField label="Type" labelWidth={14}>
         <Select width={32} onChange={onSelectChange} defaultValue={types[0]} options={types} />
       </InlineField>
+
+      <InlineField label="Field" labelWidth={14}>
+        <Select width={32} onChange={onSelectChangeField} defaultValue={value_types[0]} options={value_types} />
+      </InlineField>
+
       {(query?.stream?.type === 'signal' || query?.stream?.type === 'mqtt') &&
         streamingClientFields.map(({ label, id, min, step, placeholder }) => {
           return (

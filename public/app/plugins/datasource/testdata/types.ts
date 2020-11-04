@@ -29,7 +29,8 @@ export interface TestDataQuery extends DataQuery {
 
 export interface StreamingQuery {
   type: 'signal' | 'logs' | 'fetch' | 'mqtt';
-  speed: number;
+  update: number;
+  type_field: string;
   spread: number;
   noise: number; // wiggle around the signal for min/max
   bands?: number; // number of bands around the middle band

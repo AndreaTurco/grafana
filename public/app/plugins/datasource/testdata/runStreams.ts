@@ -1,6 +1,8 @@
 import { defaults } from 'lodash';
 import { Observable } from 'rxjs';
 import MQTT from 'async-mqtt';
+import { getTemplateSrv } from '@grafana/runtime';
+
 // import * as https from 'https';
 // import { webSocket } from 'rxjs/webSocket';
 
@@ -18,11 +20,23 @@ import { TestDataQuery, StreamingQuery } from './types';
 import { getRandomLine } from './LogIpsum';
 
 export const defaultQuery: StreamingQuery = {
-  type: 'signal',
-  speed: 250, // ms
+  type: 'mqtt',
+  type_field: 'speed',
+  update: 250, // ms
   spread: 3.5,
   noise: 2.2,
   bands: 1,
+};
+
+var mappings: { [key: string]: any } = {
+  speed: 'vehicle_status',
+  rpm: 'vehicle_engine',
+  engaged_manual: 'vehicle_gear',
+  throttle: 'vehicle_pedal',
+  brake_pressure: 'vehicle_pedal',
+  latitude: 'vehicle_position',
+  longitude: 'vehicle_position',
+  torque: 'vehicle_engine',
 };
 
 export function runStream(target: TestDataQuery, req: DataQueryRequest<TestDataQuery>): Observable<DataQueryResponse> {
@@ -48,6 +62,7 @@ export function runMQTTStream(
   req: DataQueryRequest<TestDataQuery>
 ): Observable<DataQueryResponse> {
   return new Observable<DataQueryResponse>(subscriber => {
+    console.log('target ', target);
     const streamId = `signal-${req.panelId}-${target.refId}`;
     const maxDataPoints = req.maxDataPoints || 1000;
 
@@ -60,15 +75,11 @@ export function runMQTTStream(
     data.addField({ name: 'time', type: FieldType.time });
     data.addField({ name: 'value', type: FieldType.number });
 
-    const { spread, speed, bands = 0, noise } = query;
-
-    for (let i = 0; i < bands; i++) {
-      const suffix = bands > 1 ? ` ${i + 1}` : '';
-      data.addField({ name: 'Min' + suffix, type: FieldType.number });
-      data.addField({ name: 'Max' + suffix, type: FieldType.number });
-    }
+    const { update, type_field } = query;
+    console.log(type_field, update);
 
     let value = 0;
+    // let time = Date.now();
     let timeoutId: any = null;
 
     const option = {
@@ -78,17 +89,8 @@ export function runMQTTStream(
       rejectedUnauthorized: false,
       ca: './ca-chain-server.crt',
     };
-
-    // const ws = webSocket('wss://pre-sdp.lamborghini.com/ws/mqtt/big_data/ZHWER1ZFXGLA02494');
-    // ws.subscribe(message => {
-    //   console.log(message);
-    // });
-
-    // ws.on('open', function open() {
-    //   ws.send('something');
-    // });
-
     const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
+    // const client = MQTT.connect('ws://localhost:8083/mqtt');
 
     client.on('error', error => {
       console.log('client NOT connected', error);
@@ -97,48 +99,37 @@ export function runMQTTStream(
       console.log('client connected');
     });
 
-    client.subscribe('big_data/ZHWER1ZFXGLA02494');
+    const query_vin = getTemplateSrv().replace('$vin', req.scopedVars);
+    console.log('vin: ', query_vin);
+    client.subscribe('big_data/' + query_vin);
     client.on('message', async (topic, payload) => {
       const message = JSON.parse(payload.toString()) || {};
       console.log('mqttListener', `New message in ${topic}`, message);
-
-      try {
-        const { fields, time, source: vin } = message;
-        console.log(time, vin);
-        value = fields.speed ? fields.speed : 0;
-      } catch (err) {
-        console.error('mqttListener', 'An error occured while service save dato into db', err);
+      if (message.target === mappings[type_field]) {
+        try {
+          const { fields, time, source: vin } = message;
+          console.log(time, vin);
+          value = fields[type_field];
+          console.log(type_field, value);
+        } catch (err) {
+          console.error('mqttListener', 'An error occured while service save dato into db', err);
+        }
       }
     });
 
     const addNextRow = (time: number) => {
-      value += (Math.random() - 0.5) * spread;
-
+      // value += (Math.random() - 0.5) * spread;
       let idx = 0;
       data.fields[idx++].values.add(time);
       data.fields[idx++].values.add(value);
-
-      let min = value;
-      let max = value;
-
-      for (let i = 0; i < bands; i++) {
-        min = min - Math.random() * noise;
-        max = max + Math.random() * noise;
-
-        data.fields[idx++].values.add(min);
-        data.fields[idx++].values.add(max);
-      }
     };
 
     // Fill the buffer on init
-    if (true) {
-      let time = Date.now() - maxDataPoints * speed;
-      for (let i = 0; i < maxDataPoints; i++) {
-        addNextRow(time);
-        time += speed;
-      }
-    }
-
+    // console.log('time: ', time);
+    // for (let i = 0; i < maxDataPoints; i++) {
+    //   addNextRow(time);
+    //   time += update;
+    // }
     const pushNextEvent = () => {
       addNextRow(Date.now());
       subscriber.next({
@@ -146,11 +137,11 @@ export function runMQTTStream(
         key: streamId,
       });
 
-      timeoutId = setTimeout(pushNextEvent, speed);
+      timeoutId = setTimeout(pushNextEvent, update);
     };
 
-    // Send first event in 5ms
-    setTimeout(pushNextEvent, 5);
+    // Send first event in 500ms
+    setTimeout(pushNextEvent, 500);
 
     return () => {
       console.log('unsubscribing to stream ' + streamId);
@@ -177,7 +168,7 @@ export function runSignalStream(
     data.addField({ name: 'time', type: FieldType.time });
     data.addField({ name: 'value', type: FieldType.number });
 
-    const { spread, speed, bands = 0, noise } = query;
+    const { spread, update, bands = 0, noise } = query;
 
     for (let i = 0; i < bands; i++) {
       const suffix = bands > 1 ? ` ${i + 1}` : '';
@@ -209,10 +200,10 @@ export function runSignalStream(
 
     // Fill the buffer on init
     if (true) {
-      let time = Date.now() - maxDataPoints * speed;
+      let time = Date.now() - maxDataPoints * update;
       for (let i = 0; i < maxDataPoints; i++) {
         addNextRow(time);
-        time += speed;
+        time += update;
       }
     }
 
@@ -223,7 +214,7 @@ export function runSignalStream(
         key: streamId,
       });
 
-      timeoutId = setTimeout(pushNextEvent, speed);
+      timeoutId = setTimeout(pushNextEvent, update);
     };
 
     // Send first event in 5ms
@@ -255,7 +246,7 @@ export function runLogsStream(
     data.addField({ name: 'time', type: FieldType.time });
     data.meta = { preferredVisualisationType: 'logs' };
 
-    const { speed } = query;
+    const { update } = query;
 
     let timeoutId: any = null;
 
@@ -268,7 +259,7 @@ export function runLogsStream(
         key: streamId,
       });
 
-      timeoutId = setTimeout(pushNextEvent, speed);
+      timeoutId = setTimeout(pushNextEvent, update);
     };
 
     // Send first event in 5ms
