@@ -108,16 +108,18 @@ export function runMQTTStream(
     client.on('message', async (topic, payload) => {
       const message = JSON.parse(payload.toString()) || {};
       console.log('mqttListener', `New message in ${topic}`, message);
-      if (message.target === mappings[type_field]) {
-        try {
-          const { fields, time, source: vin } = message;
-          console.log(time, vin);
-          value = fields[type_field];
-          console.log(type_field, value);
-        } catch (err) {
-          console.error('mqttListener', 'An error occured while service save dato into db', err);
+      message.forEach((element: any) => {
+        if (element.target === mappings[type_field]) {
+          try {
+            const { fields, time, source: vin } = element;
+            console.log(time, vin);
+            value = fields[type_field];
+            console.log(type_field, value);
+          } catch (err) {
+            console.error('mqttListener', 'An error occured while service save dato into db', err);
+          }
         }
-      }
+      });
     });
 
     const addNextRow = (time: number) => {
