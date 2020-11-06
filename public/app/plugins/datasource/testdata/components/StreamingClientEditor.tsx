@@ -16,10 +16,13 @@ const value_types = [
   { value: 'rpm', label: 'Rpm' },
   { value: 'engaged_manual', label: 'Engaged' },
   { value: 'throttle', label: 'Throttle' },
-  { value: 'brake_pressure', label: 'Brake' },
   { value: 'latitude', label: 'Latitude' },
   { value: 'longitude', label: 'Longitude' },
-  { value: 'torque', label: 'Torque' },
+  { value: 'wheel_position', label: 'wheel_position' },
+  { value: 'coolant_temperature', label: 'coolant_temperature' },
+  { value: 'oil_temperature', label: 'oil_temperature' },
+  { value: 'oil_pressure', label: 'oil_pressure' },
+  { value: 'altitude', label: 'altitude' },
 ];
 
 const types = [{ value: 'mqtt', label: 'MQTT' }];

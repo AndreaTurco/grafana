@@ -29,14 +29,17 @@ export const defaultQuery: StreamingQuery = {
 };
 
 var mappings: { [key: string]: any } = {
-  speed: 'vehicle_status',
-  rpm: 'vehicle_engine',
-  engaged_manual: 'vehicle_gear',
-  throttle: 'vehicle_pedal',
-  brake_pressure: 'vehicle_pedal',
-  latitude: 'vehicle_position',
-  longitude: 'vehicle_position',
-  torque: 'vehicle_engine',
+  speed: 'SPEED',
+  rpm: 'RPM',
+  engaged_manual: 'ENGAGED_MANUAL',
+  throttle: 'THROTTLE',
+  latitude: 'LATITUDE',
+  longitude: 'LONGITUDE',
+  wheel_position: 'WHEEL_POSITION',
+  coolant_temperature: 'COOLANT_TEMPERATURE',
+  oil_temperature: 'oil_temperature',
+  oil_pressure: 'OIL_PRESSURE',
+  altitude: 'ALTITUDE',
 };
 
 export function runStream(target: TestDataQuery, req: DataQueryRequest<TestDataQuery>): Observable<DataQueryResponse> {
