@@ -76,24 +76,27 @@ export function runMQTTStream(
     data.name = target.alias || 'Signal ' + target.refId;
     data.addField({ name: 'time', type: FieldType.time });
     data.addField({ name: 'value', type: FieldType.number });
-
     const { update, type_field } = query;
     console.log(type_field, update);
+
+    if (type_field === 'gps') {
+      data.addField({ name: 'value2', type: FieldType.number });
+    }
 
     let value = 0.0;
     let value2 = -1.0;
     // let time = Date.now();
     let timeoutId: any = null;
 
-    const option = {
-      username: 'admin',
-      password: 'Spindox123!',
-      clientId: 'grafanaPlugin',
-      rejectedUnauthorized: false,
-      ca: './ca-chain-server.crt',
-    };
-    const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
-    // const client = MQTT.connect('ws://localhost:8083/mqtt');
+    // const option = {
+    //   username: 'admin',
+    //   password: 'Spindox123!',
+    //   clientId: 'grafanaPlugin',
+    //   rejectedUnauthorized: false,
+    //   ca: './ca-chain-server.crt',
+    // };
+    // const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
+    const client = MQTT.connect('ws://localhost:8083/mqtt');
 
     client.on('error', error => {
       console.log('client NOT connected', error);
@@ -112,16 +115,15 @@ export function runMQTTStream(
         if (element.target === mappings[type_field]) {
           try {
             const { fields, time, source: vin } = element;
-            console.log(time, vin);
-            fields.forEach((f: any) => {
-              if (type_field === 'GPS') {
-                value = f['latitude'];
-                value2 = f['longitude'];
-              } else {
-                value = f[type_field];
-              }
-            });
-            console.log(type_field, value);
+            // console.log(time, vin);
+            if (type_field === 'gps') {
+              console.log(fields['latitude']);
+              value = fields['latitude'];
+              value2 = fields['longitude'];
+            } else {
+              value = fields[type_field];
+            }
+            // console.log(type_field, value);
           } catch (err) {
             console.error('mqttListener', 'An error occured while service save dato into db', err);
           }
