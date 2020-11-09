@@ -88,15 +88,15 @@ export function runMQTTStream(
     // let time = Date.now();
     let timeoutId: any = null;
 
-    // const option = {
-    //   username: 'admin',
-    //   password: 'Spindox123!',
-    //   clientId: 'grafanaPlugin',
-    //   rejectedUnauthorized: false,
-    //   ca: './ca-chain-server.crt',
-    // };
-    // const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
-    const client = MQTT.connect('ws://localhost:8083/mqtt');
+    const option = {
+      username: 'admin',
+      password: 'Spindox123!',
+      clientId: 'grafanaPlugin',
+      rejectedUnauthorized: false,
+      ca: './ca-chain-server.crt',
+    };
+    const client = MQTT.connect('wss://pre-sdp.lamborghini.com:443/ws/mqtt', option);
+    // const client = MQTT.connect('ws://localhost:8083/mqtt');
 
     client.on('error', error => {
       console.log('client NOT connected', error);
