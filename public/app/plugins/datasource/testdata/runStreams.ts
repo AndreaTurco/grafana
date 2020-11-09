@@ -115,7 +115,7 @@ export function runMQTTStream(
         if (element.target === mappings[type_field]) {
           try {
             const { fields, time, source: vin } = element;
-            // console.log(time, vin);
+            console.log(time, vin);
             if (type_field === 'gps') {
               console.log(fields['latitude']);
               value = fields['latitude'];
