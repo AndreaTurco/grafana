@@ -113,7 +113,7 @@ export function runMQTTStream(
           try {
             const { fields, time, source: vin } = element;
             console.log(time, vin);
-            fields.array.forEach((f: any) => {
+            fields.forEach((f: any) => {
               if (type_field === 'GPS') {
                 value = f['latitude'];
                 value2 = f['longitude'];
