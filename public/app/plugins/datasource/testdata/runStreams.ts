@@ -33,8 +33,7 @@ var mappings: { [key: string]: any } = {
   rpm: 'RPM',
   engaged_manual: 'ENGAGED_MANUAL',
   throttle: 'THROTTLE',
-  latitude: 'LATITUDE',
-  longitude: 'LONGITUDE',
+  gps: 'GPS',
   wheel_position: 'WHEEL_POSITION',
   coolant_temperature: 'COOLANT_TEMPERATURE',
   oil_temperature: 'oil_temperature',
@@ -81,7 +80,8 @@ export function runMQTTStream(
     const { update, type_field } = query;
     console.log(type_field, update);
 
-    let value = 0;
+    let value = 0.0;
+    let value2 = -1.0;
     // let time = Date.now();
     let timeoutId: any = null;
 
@@ -113,7 +113,14 @@ export function runMQTTStream(
           try {
             const { fields, time, source: vin } = element;
             console.log(time, vin);
-            value = fields[type_field];
+            fields.array.forEach((f: any) => {
+              if (type_field === 'GPS') {
+                value = f['latitude'];
+                value2 = f['longitude'];
+              } else {
+                value = f[type_field];
+              }
+            });
             console.log(type_field, value);
           } catch (err) {
             console.error('mqttListener', 'An error occured while service save dato into db', err);
@@ -127,6 +134,9 @@ export function runMQTTStream(
       let idx = 0;
       data.fields[idx++].values.add(time);
       data.fields[idx++].values.add(value);
+      if (value2 > 0) {
+        data.fields[idx++].values.add(value2);
+      }
     };
 
     // Fill the buffer on init
